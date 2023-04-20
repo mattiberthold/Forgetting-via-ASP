@@ -1,0 +1,7 @@
+% p :- a, not p.
+r(0,a,p).
+r(0,c,p).
+r(0,b,a).
+
+forget(p).
+

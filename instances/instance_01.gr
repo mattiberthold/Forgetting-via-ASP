@@ -1,0 +1,11 @@
+% r(Nr,Type,Atom).
+
+% a :- p.
+r(1,a,a).
+r(1,b,p).
+
+% p :- not not p.
+r(2,a,p).
+r(2,d,p).
+
+forget(p).

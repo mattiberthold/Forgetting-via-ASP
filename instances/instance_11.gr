@@ -1,0 +1,19 @@
+% p :- not not p.
+r(0,a,p).
+r(0,d,p).
+
+% a :- d, p.
+r(1,a,a).
+r(1,b,d).
+r(1,b,p).
+
+% b :- p.
+r(2,a,b).
+r(2,b,p).
+
+% c :- p.
+r(3,a,c).
+r(3,b,p).
+
+forget(p).
+

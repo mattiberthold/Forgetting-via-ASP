@@ -1,0 +1,17 @@
+% p :- not not p.
+r(0,a,p).
+r(0,d,p).
+
+% a :- p.
+r(1,a,a).
+r(1,b,p).
+
+% b :- p.
+r(2,a,b).
+r(2,b,p).
+
+forget(p).
+
+% outcome:
+% a :- not not a, not not b.
+% b :- not not a, not not b.

@@ -1,0 +1,15 @@
+% a :- not q.
+r(0,a,a).
+r(0,c,q).
+
+% q :- b.
+r(1,a,q).
+r(1,b,b).
+
+% q :- not c, not d.
+r(2,a,q).
+r(2,c,c).
+r(2,c,d).
+
+forget(q).
+

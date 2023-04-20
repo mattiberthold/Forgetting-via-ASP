@@ -1,0 +1,129 @@
+01
+% p :- not not p. a :- p. b :- not p.
+% forget(p).
+% outcome:
+% a :- not b.
+% a :- not not a, not not b.
+% b :- not a.
+% b :- not not a, not not b.
+
+05
+% p :- not not p. a :- c, not p. b :- not p.
+% forget(p).
+% outcome:
+% a :- c, not b.
+% a :- c, not not a, not not b.
+% b :- not a, not not c.
+% b :- not c, not not b.
+% b :- not not a, not not b, not not c.
+
+06
+% p :- not not p. a :- p. b :- p.
+% forget(p)
+% outcome:
+% a :- not not a, not not b.
+% b :- not not a, not not b.
+
+07
+% p :- not not p. a :- not p. b :- not p.
+% forget(p).
+% outcome:
+% a :- not not a, not not b.
+% b :- not not a, not not b.
+
+08
+% p :- not not p. p :- g, p. b :- h, p. c :- i, p. d :- j, not p. d :- k, not p. f :- l, not p.
+% THIS INSTANCE IS A BIT BIG, TRY SUBSETS OF THE PROGRAM
+% forget(p).
+% outcome:
+% ...
+
+09
+% p :- not not p. p :- g, p. b :- h, p. f :- l, not p.
+% forget(p).
+% outcome:
+% ...
+
+%----------------------------------------------------
+
+_01
+% a :- p. p :- not not p.
+% forget(p).
+
+_03
+% p :- not q. q :- not p. b.
+% forget(q).
+
+_06
+% a :- not p. b :- d, not not p. p :- not c.
+%forget(p).
+
+_07
+% p :- not q. q :- a, b. q :- c.
+%forget(q).
+
+_09
+% a :- not q. q :- b. q :- not c, not d.
+%forget(q).
+
+_10
+% a :- not q, not b. q :- b. q :- not c, not d.
+%forget(q).
+
+_11
+% p :- not not p. a :- d, p. b :- p. c :- p.
+%forget(p).
+
+_12
+% a :- not p. p :- not not p.
+% forget(p).
+
+_13
+% p :- a, not p.
+%forget(p).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

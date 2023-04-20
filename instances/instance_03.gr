@@ -1,0 +1,12 @@
+% p :- not q.
+r(1,a,a).
+r(1,c,q).
+
+% q :- not p.
+r(2,a,q).
+r(2,c,p).
+
+% b.
+r(3,a,b).
+
+forget(q).

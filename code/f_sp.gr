@@ -1,0 +1,201 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ALL THE NECESSARY SET THINGIES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+atom(A)					:-	r(_,_,A).
+rule(R)					:-	r(R,_,_).
+atomCard(Card)				:-	Card = {atom(_)}.
+aNr_(0..ANr-1)				:-	atomCard(ANr).
+% atoms are ordered lexicographically
+aNr_(A,ANr)				:-	ANr{atom(OtherA):OtherA<A}ANr, aNr_(ANr), atom(A).
+% atom numbers are the power of they place in the order,
+% so that the sum stays unique for each combination
+aNr(A,2**ANr)				:-	aNr_(A,ANr).
+
+% rule/3 predicates of the same rule number are summarized into a single rule/4 predicate,
+% by summing the a,b,c,d elements respectively
+r_in_unfiltered(A,B,C,D)		:-	rule(R),
+						A = #sum{ANr:aNr(Atom,ANr),r(R,a,Atom)},
+						B = #sum{ANr:aNr(Atom,ANr),r(R,b,Atom)},
+						C = #sum{ANr:aNr(Atom,ANr),r(R,c,Atom)},
+						D = #sum{ANr:aNr(Atom,ANr),r(R,d,Atom)}.
+
+forget(Q,QNr)				:-	forget(Q), aNr(Q,QNr).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% NORMAL FORM CONSTRUCTION ON THE INPUT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r_in_filtering(0,A,B,C,D)		:-	r_in_unfiltered(A,B,C,D).
+
+% getting rid of tautologies
+r_in_filtering(1,A,B,C,D)		:-	r_in_filtering(0,A,B,C,D), A&B=0, B&C=0, C&D=0.
+
+% removing double negation if literal also exists in the positive body
+r_in_filtering(2,A,B,C,D&~B)		:-	r_in_filtering(1,A,B,C,D).
+
+% if negative bodyliteral is in head too, remove it from the head
+r_in_filtering(3,A&~C,B,C,D)		:-	r_in_filtering(2,A,B,C,D).
+
+% removing non-minimal rules
+r_in_filtering(4,A,B,C,D)		:-	r_in_filtering(3,A,B,C,D), not r_in_redun(A,B,C,D).
+
+r_in_redun(A2,B2,C2,D2)			:-	r_in_filtering(3,A1,B1,C1,D1), r_in_filtering(3,A2,B2,C2,D2),
+						A1?A2=A2, B1?B2=B2, C1?C2=C2, D1?D2=D2,	% all sets are supersets
+						(A1^A2)?(B1^B2)?(C1^C2)?(D1^D2)!=0.		% at least one set is different
+
+r_in_filtered(A,B,C,D)			:-	r_in_filtering(4,A,B,C,D).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% FORGETTING - Let's Go!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r_(A,B,C,D)				:-	r_in_filtered(A,B,C,D).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% RULE SET THINGIES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ruleordering(A1,B1,C1,D1,A2,B2,C2,D2)	:-	r_(A1,B1,C1,D1), r_(A2,B2,C2,D2), A1<A2.
+ruleordering(A1,B1,C1,D1,A2,B2,C2,D2)	:-	r_(A1,B1,C1,D1), r_(A2,B2,C2,D2), A1=A2, B1<B2.
+ruleordering(A1,B1,C1,D1,A2,B2,C2,D2)	:-	r_(A1,B1,C1,D1), r_(A2,B2,C2,D2), A1=A2, B1=B2, C1<C2.
+ruleordering(A1,B1,C1,D1,A2,B2,C2,D2)	:-	r_(A1,B1,C1,D1), r_(A2,B2,C2,D2), A1=A2, B1=B2, C1=C2, D1<D2.
+
+rNr_(0..C-1)				:-	C = {r_(_,_,_,_)}.
+rNr_(RNr,A,B,C,D)			:-	RNr{r_(A2,B2,C2,D2):ruleordering(A2,B2,C2,D2,A,B,C,D)}RNr, rNr_(RNr), r_(A,B,C,D).
+rNr(2**RNr,A,B,C,D)			:-	rNr_(RNr,A,B,C,D).
+rCard(C)				:-	C = {rNr(_,_,_,_,_)}.
+rSet(0..(2**C)-1)			:-	rCard(C).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OCC
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+bigR(R)					:-	R  = #sum{RNr: rNr(RNr,A,B,C,D), QNr&(A?B?C?D)=0	}, forget(_,QNr).
+bigR0(R0)				:-	R0 = #sum{RNr: rNr(RNr,A,B,C,D), QNr&B!=0		}, forget(_,QNr).
+bigR1(R1)				:-	R1 = #sum{RNr: rNr(RNr,A,B,C,D), QNr&C!=0		}, forget(_,QNr).
+bigR2(R2)				:-	R2 = #sum{RNr: rNr(RNr,A,B,C,D), QNr&D!=0, A&QNr =0	}, forget(_,QNr).
+bigR3(R3)				:-	R3 = #sum{RNr: rNr(RNr,A,B,C,D), QNr&D!=0, A&QNr!=0	}, forget(_,QNr).
+bigR4(R4)				:-	R4 = #sum{RNr: rNr(RNr,A,B,C,D), QNr&D =0, A&QNr!=0	}, forget(_,QNr).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% D_as
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% the output is d_as/3 with d_as(Set,C,D)
+% the call is d_as/1 with d_as(Set)
+
+% the empty program has one as dual, the empty set
+d_as(0,0,0)				:-	d_as(0).
+
+% giving numbers to the rules that are considered
+d_as_Nr(Set,DasNr,A,B,C,D)		:-	rNr_(DasNr), rNr(RNr,A,B,C,D), d_as(Set), Set&RNr!=0,
+						DasNr{	r_(A2,B2,C2,D2): rNr(RNr2,A2,B2,C2,D2), RNr2&Set!=0, RNr2<RNr	}DasNr.
+
+% separating the atoms from the sets
+d_as_Nr_(Set,DasNr,Z,0,0,0)		:-	d_as_Nr(Set,DasNr,A,_,_,_), aNr(_,Z), A&Z!=0, forget(_,QNr), QNr!=Z.
+d_as_Nr_(Set,DasNr,0,Z,0,0)		:-	d_as_Nr(Set,DasNr,_,B,_,_), aNr(_,Z), B&Z!=0, forget(_,QNr), QNr!=Z.
+d_as_Nr_(Set,DasNr,0,0,Z,0)		:-	d_as_Nr(Set,DasNr,_,_,C,_), aNr(_,Z), C&Z!=0, forget(_,QNr), QNr!=Z.
+d_as_Nr_(Set,DasNr,0,0,0,Z)		:-	d_as_Nr(Set,DasNr,_,_,_,D), aNr(_,Z), D&Z!=0, forget(_,QNr), QNr!=Z.
+
+% initial D_as
+d_as(Set,0,0,0)				:-	d_as(Set), Set!=0.
+
+% iterating through the numbered sets
+d_as(Set,I+1,C,D?Z)			:-	d_as(Set,I,C,D), d_as_Nr_(Set,I,Z,0,0,0).
+d_as(Set,I+1,C?Z,D)			:-	d_as(Set,I,C,D), d_as_Nr_(Set,I,0,Z,0,0).
+d_as(Set,I+1,C,D?Z)			:-	d_as(Set,I,C,D), d_as_Nr_(Set,I,0,0,Z,0).
+d_as(Set,I+1,C?Z,D)			:-	d_as(Set,I,C,D), d_as_Nr_(Set,I,0,0,0,Z).
+
+% one resulting as dual
+d_as(Set,C,D)				:-	d_as(Set,I,C,D), not d_as(Set,I+1,_,_), I!=0.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DERIVATION RULES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+d_as(BR0?BR2)				:-	bigR0(BR0), bigR2(BR2).
+d_as(BR1?BR4)				:-	bigR1(BR1), bigR4(BR4).
+d_as(BR3?BR4)				:-	bigR3(BR3), bigR4(BR4).
+d_as(BR4)				:-	bigR4(BR4).
+
+%----------------------------- 0  -----------------------------
+r_der(A,B,C,D)				:-	rNr(R,A,B,C,D), bigR(BR), R&BR!=0.
+
+%----------------------------- 1a -----------------------------
+r_der((A0?A4)&~QNr,(B0?B4)&~QNr,(C0?C4)&~QNr,(D0?D4)&~QNr)
+					:-	rNr(R0,A0,B0,C0,D0), bigR0(BR0), R0&BR0!=0,
+						rNr(R4,A4,B4,C4,D4), bigR4(BR4), R4&BR4!=0, forget(_,QNr).
+%----------------------------- 2a -----------------------------
+r_der((A0?A3)&~QNr,(B0?B3)&~QNr,(C0?C3?A'?C')&~QNr,(D0?D3?B'?D')&~QNr)
+					:-	rNr(R0,A0,B0,C0,D0), bigR0(BR0), R0&BR0!=0,
+						rNr(R',A',B',C',D'), bigR1(BR1), bigR4(BR4), R'&(BR1?BR4)!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0, forget(_,QNr).
+%----------------------------- 3a -----------------------------
+r_der((A0)&~QNr,(B0?B3)&~QNr,(C0?C3?A3?DasC)&~QNr,(D0?D3?DasD)&~QNr)
+					:-	rNr(R0,A0,B0,C0,D0), bigR0(BR0), R0&BR0!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0,
+						bigR0(BR0), bigR2(BR2), d_as(BR0?BR2,DasC,DasD), forget(_,QNr).
+
+%----------------------------- 1b -----------------------------
+r_der((A2)&~QNr,(B2)&~QNr,(C2?A4?C4)&~QNr,(D2?B4?D4)&~QNr)
+					:-	rNr(R2,A2,B2,C2,D2), bigR2(BR2), R2&BR2!=0,
+						rNr(R4,A4,B4,C4,D4), bigR4(BR4), R4&BR4!=0, forget(_,QNr).
+%----------------------------- 2b -----------------------------
+r_der((A2)&~QNr,(B2)&~QNr,(C2?A3?C3?A'?C')&~QNr,(D2?B3?D3?B'?D')&~QNr)
+					:-	rNr(R2,A2,B2,C2,D2), bigR2(BR2), R2&BR2!=0,
+						rNr(R',A',B',C',D'), bigR1(BR1), bigR4(BR4), R'&(BR1?BR4)!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0, forget(_,QNr).
+%----------------------------- 3b -----------------------------
+r_der((A2)&~QNr,(B2)&~QNr,(C2?C3?A3?DasC)&~QNr,(D2?B3?D3?DasD)&~QNr)
+					:-	rNr(R2,A2,B2,C2,D2), bigR2(BR2), R2&BR2!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0,
+						bigR0(BR0), bigR2(BR2), d_as(BR0?BR2,DasC,DasD), forget(_,QNr).
+
+%----------------------------- 4  -----------------------------
+r_der((A')&~QNr,(B')&~QNr,(C'?DasC)&~QNr,(D'?DasD)&~QNr)
+					:-	rNr(R',A',B',C',D'), bigR1(BR1), bigR4(BR4), R'&(BR1?BR4)!=0,
+						bigR3(BR3), d_as(BR3?BR4,DasC,DasD), forget(_,QNr).
+%----------------------------- 5  -----------------------------
+r_der((A')&~QNr,(B')&~QNr,(C'?A?C?A3?C3?DasC)&~QNr,(D'?B?D?B3?D3?DasD)&~QNr)
+					:-	rNr(R',A',B',C',D'), bigR1(BR1), bigR4(BR4), R'&(BR1?BR4)!=0,
+						rNr(R ,A ,B ,C ,D ), bigR0(BR0), bigR2(BR2), R &(BR0?BR2)!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0,
+						d_as(BR4,DasC,DasD), forget(_,QNr).
+%----------------------------- 6  -----------------------------
+r_der((A')&~QNr,(B')&~QNr,(C'?A3?C3?DasC)&~QNr,(D'?B3?D3?DasD)&~QNr)
+					:-	rNr(R',A',B',C',D'), bigR1(BR1), bigR4(BR4), R'&(BR1?BR4)!=0,
+						rNr(R3,A3,B3,C3,D3), bigR3(BR3), R3&BR3!=0,
+						d_as(BR1?BR4,DasC,DasD), forget(_,QNr).
+
+%----------------------------- 7  -----------------------------
+r_der((A0?A3)&~QNr,(B0?B3)&~QNr,(C0?C3?A3?A3'?C3'?DasC)&~QNr,(D0?D3?B3'?D3'?DasD)&~QNr)
+					:-	rNr(R0 ,A0 ,B0 ,C0 ,D0 ), bigR0(BR0), R0&BR0!=0,
+						rNr(R3 ,A3 ,B3 ,C3 ,D3 ), bigR3(BR3), R3&BR3!=0,
+						rNr(R3',A3',B3',C3',D3'), R3'!=R3, R3'&BR3!=0,
+						bigR0(BR0), bigR2(BR2), d_as(BR0?BR2,DasC,DasD), forget(_,QNr).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% NORMALFORM CONSTRUCTION ON THE OUTPUT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r_out_filtering(0,A,B,C,D)		:-	r_der(A,B,C,D).
+
+% getting rid of tautologies
+r_out_filtering(1,A,B,C,D)		:-	r_out_filtering(0,A,B,C,D), A&B=0, B&C=0, C&D=0.
+
+% removing double negation if literal also exists in the positive body
+r_out_filtering(2,A,B,C,D&~B)		:-	r_out_filtering(1,A,B,C,D).
+
+% if negative body literal is in head too, remove it from the head
+r_out_filtering(3,A&~C,B,C,D)		:-	r_out_filtering(2,A,B,C,D).
+
+% removing non-minimal rules
+r_out_filtering(4,A,B,C,D)		:-	r_out_filtering(3,A,B,C,D), not r_out_redun(A,B,C,D).
+r_out_redun(A2,B2,C2,D2)		:-	r_out_filtering(3,A1,B1,C1,D1), r_out_filtering(3,A2,B2,C2,D2),
+						A1?A2=A2, B1?B2=B2, C1?C2=C2, D1?D2=D2,	% all sets are supersets
+						(A1^A2)?(B1^B2)?(C1^C2)?(D1^D2)!=0.		% at least one set is different
+
+n_rule(A,B,C,D)				:-	r_out_filtering(4,A,B,C,D).
+
+#show n_rule/4.				%	new rule

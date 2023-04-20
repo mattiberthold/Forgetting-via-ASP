@@ -1,0 +1,9 @@
+% a :- not p.
+r(0,a,a).
+r(0,c,p).
+
+% p :- not not p.
+r(2,a,p).
+r(2,d,p).
+
+forget(p).

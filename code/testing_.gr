@@ -1,0 +1,80 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% GENERATING ALL THE NECESSARY SET THINGIES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+valCard(2**C)				:-	atomCard(C).
+val(0..C-1)				:-	valCard(C).
+complement(S,Max^S) 			:-	val(S), valCard(Max+1).
+interpret(H,T)				:-	val(H), val(T), T = T?H.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% HT MODELS OF THE PROGRAM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+inconsistent(H,T)			:-	interpret(H,T), r_in_filtered(A,B,C,D), A&T=0, B&T=B, C&T=0, D&T=D.
+inconsistent(H,T)			:-	interpret(H,T), r_in_filtered(A,B,C,D), A&H=0, B&H=B, C&T=0, D&T=D.
+% HT-models and equality models
+model(H,T)				:-	interpret(H,T), not inconsistent(H,T).
+numberof_model(C)			:-	C = {model(_,_)}.
+equ_model(T,T)				:-	model(T,T), not model(H,T):H<T, val(H).
+numberof_equ_model(C)			:-	C = {equ_model(_,_)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% HT MODELS OF THE NEW PROGRAM TO MAKE COMPARISON
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%the set V of atoms that are to be forgotten
+v_(V)					:-	V = #sum{ANr:aNr(Atom,ANr),forget(Atom)}.
+
+% all subsets of V
+v_sub(SV)				:-	v_(V), val(SV), V = V?SV.
+
+%the set A\V
+a_wo_v_(AwoV)				:-	v_(V), complement(V,AwoV).
+
+% all subsets of A\V
+a_wo_v_sub(SV)				:-	a_wo_v_(V), val(SV), V = V?SV.
+
+% calculating new HT models according to F_SP, F_R and F_M
+trouble(Y)				:-	2{rel_Y__P_V(Y,_)}, a_wo_v_sub(Y).	%the sets that potentially satisfy Omega
+sp_model(H,T)				:-	a_wo_v_sub(H), a_wo_v_sub(T), rel_Y__P_V(T,_), r_Y_A__P_V(T,A,H):rel_Y__P_V(T,A).
+r_model(H,T)				:-	a_wo_v_sub(H), a_wo_v_sub(T), r_Y_A__P_V(T,_,H).
+minimal(T,A)				:-	rel_Y__P_V(T,A), r_Y_A__P_V(T,A,H):sp_model(H,T).
+m_model(H,T)				:-	minimal(T,A), r_Y_A__P_V(T,A,H).
+m_model(H,T)				:-	not minimal(T,_), r_model(H,T).
+
+r_Y_A__P_V(Y,A,X&F)			:-	rel_Y__P_V(Y,A), model(X,Y?A), a_wo_v_(F).
+rel_Y__P_V(Y,A)				:-	v_sub(A), a_wo_v_sub(Y), model(Y?A,Y?A),
+						{ v_sub(SA): A = SA?A, model(Y?SA,Y?A), SA!=A }0.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% HT models of new rules (to make the comparison)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+n_interpret(H,T)			:-	interpret(H,T), a_wo_v_sub(T).
+n_inconsistent(H,T)			:-	n_interpret(H,T), n_rule(A,B,C,D), A&T=0, B&T=B, C&T=0, D&T=D.
+n_inconsistent(H,T)			:-	n_interpret(H,T), n_rule(A,B,C,D), A&H=0, B&H=B, C&T=0, D&T=D.
+
+n_model(H,T)				:-	n_interpret(H,T), not n_inconsistent(H,T).
+n_numberof_model(C)			:-	C = {n_model(_,_)}.
+n_equ_model(T)				:-	n_model(T,T), not n_model(H,T):H<T, a_wo_v_sub(H).
+n_numberof_equ_model(C)			:-	C = {n_equ_model(_)}.
+
+missing_M(H,T)				:-	m_model(H,T), not n_model(H,T).
+el_M(H,T)				:-	not m_model(H,T), n_model(H,T), a_wo_v_sub(T).
+missing_SP(H,T)				:-	sp_model(H,T), not n_model(H,T).
+el_SP(H,T)				:-	not sp_model(H,T), n_model(H,T), a_wo_v_sub(T).
+missing_R(H,T)				:-	r_model(H,T), not n_model(H,T).
+el_R(H,T)				:-	not r_model(H,T), n_model(H,T), a_wo_v_sub(T).
+
+%#show trouble/1.			%	the sets that satisfy Omega
+%#show model/2.				%	model of the old program
+%#show n_model/2.			%	model of the new program
+%#show m_model/2.			%	model according to F_M semantics
+%#show r_model/2.			%	model according to F_R semantics
+%#show sp_model/2.			%	model according to F_R semantics
+%#show el_M/2.				%	model too many according to F_M semantics
+%#show missing_M/2.			%	model missing according to F_M semantics
+#show el_SP/2.				%	model too many according to F_SP semantics
+#show missing_SP/2.			%	model missing according to F_SP semantics
+%#show el_R/2.				%	model too many according to F_R semantics
+%#show missing_R/2.			%	model missing according to F_R semantics
